@@ -10,7 +10,7 @@ pub enum TokenType {
 impl fmt::Display for TokenType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            TokenType::WhiteSpace => write!(f, "WhiteSpace"),
+            TokenType::WhiteSpace => write!(f, "White Space"),
             TokenType::Seperator => write!(f, "Seperator"),
             TokenType::Symbol => write!(f, "Symbol"),
             TokenType::Unkown => write!(f, "Unknown"),
@@ -65,7 +65,7 @@ impl fmt::Display for Token {
 const WHITE_SPACE_CHARACTERS: &[char] = &[' ', '\t', '\r'];
 const SEPERATOR_CHARACTERS: &[char] = &['\n'];
 const SYMBOL_CHARACTERS: &[char] = &[
-    '+', '-', '/', '*', '=', '(', ')', ',', '"', '\'', '<', '>', '{', '}', '&', '-', '.', '%',
+    '+', '-', '/', '*', '=', '(', ')', ',', '"', '\'', '<', '>', '{', '}', '&', '|', '.', '%',
 ];
 
 pub fn tokenize(code: &str) -> Vec<Token> {
