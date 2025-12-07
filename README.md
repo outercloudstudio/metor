@@ -34,5 +34,8 @@ i32 hIndex: i32[] citations {
 # What does Metor do Different?
 I was driven to create Metor mainly from two gribes. I despise how messy the build system and package management ecosystem is for C++. I also have grown to dislike how begrugingly slow it feels to write Rust. Now before all of the Rust fanboys come hunt me down and murder me in my sleep, just hear me out. While I am not an expert at rust, I have written a few projects in it. Namely my scriptable vulkan renderer and now this initial compiler (Eventually the Metor compiler will be written in Metor). I have always felt that I was working against the language to achieve what I wanted. I'm all for memory rigourous safety, but sometimes I just want to write the damn function.
 
+# Compiler Design
+The design of Metor's compiler is heavily informed by my experiements writing the [Mew compiler](https://github.com/outercloudstudio/Mew-Compiler/tree/main). I haven't done any formal reasearch into compiler design yet, so pretty much everything here is just me making stuff up on the fly. Although, I'll probably take a compilers class soon in the next few years.
+
 ## Why is it Called Metor?
 Metor is a nickname some of my friends from highschool gave me and I think it's funny. :)
