@@ -21,7 +21,7 @@ i32 hIndex: i32[] citations {
 
     i32 maxH = 0
 
-    for key of dict.keys() {
+    for key in dict.keys() {
         if dict.get(key) >= key {
 	        maxH = max(maxH, key)
         }
