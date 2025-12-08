@@ -360,6 +360,28 @@ impl fmt::Display for KeywordNode {
     }
 }
 
+pub struct GroupNode {
+    pub content: Vec<Node>,
+    pub lines: (usize, usize),
+    pub characters: (usize, usize),
+}
+
+impl fmt::Display for GroupNode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut sub_display = String::new();
+
+        for node in &self.content {
+            sub_display += &format!("{}\n", node);
+        }
+
+        write!(
+            f,
+            "Group {}, {} -> {}, {}\n----\n{}----",
+            self.lines.0, self.characters.0, self.lines.1, self.characters.1, sub_display
+        )
+    }
+}
+
 pub enum Node {
     String,
     Keyword(KeywordNode),
@@ -369,6 +391,37 @@ pub enum Node {
     Number(NumberNode),
     Boolean(BooleanNode),
     Name(NameNode),
+    Group(GroupNode),
+}
+
+impl Node {
+    pub fn get_characters(&self) -> (usize, usize) {
+        match self {
+            Node::String => { (0, 0) },
+            Node::Keyword(keyword_node) => { keyword_node.characters },
+            Node::Type(type_node) => { type_node.characters },
+            Node::Operator(operator_node) => { operator_node.characters },
+            Node::Symbol(symbol_node) => { symbol_node.characters },
+            Node::Number(number_node) => { number_node.characters },
+            Node::Boolean(boolean_node) => { boolean_node.characters },
+            Node::Name(name_node) => { name_node.characters },
+            Node::Group(group_node) => { group_node.characters },
+        }
+    }
+
+    pub fn get_lines(&self) -> (usize, usize) {
+        match self {
+            Node::String => { (0, 0) },
+            Node::Keyword(keyword_node) => { keyword_node.lines },
+            Node::Type(type_node) => { type_node.lines },
+            Node::Operator(operator_node) => { operator_node.lines },
+            Node::Symbol(symbol_node) => { symbol_node.lines },
+            Node::Number(number_node) => { number_node.lines },
+            Node::Boolean(boolean_node) => { boolean_node.lines },
+            Node::Name(name_node) => { name_node.lines },
+            Node::Group(group_node) => { group_node.lines },
+        }
+    }
 }
 
 impl fmt::Display for Node {
@@ -381,6 +434,7 @@ impl fmt::Display for Node {
             Node::Number(number_node) => write!(f, "{}", number_node),
             Node::Boolean(boolean_node) => write!(f, "{}", boolean_node),
             Node::Symbol(symbol_node) => write!(f, "{}", symbol_node),
+            Node::Group(group_node) => write!(f, "{}", group_node),
             _ => write!(f, "Unknown"),
         }
     }
@@ -417,6 +471,39 @@ pub fn build_syntax_tree(tokens: &Vec<tokenizer::Token>) -> Vec<Node> {
                 }
             }
             _ => {}
+        }
+    }
+
+    let mut index_stack: Vec<usize> = Vec::new();
+
+    for index in 0..nodes.len() {
+        let token = &nodes[index];
+        
+        if let Node::Symbol(symbol_node) = token && let Symbol::OpenCurlyBracket = symbol_node.symbol {
+            index_stack.push(index);
+        }
+
+        if let Node::Symbol(symbol_node) = token && let Symbol::ClosedCurlyBracket = symbol_node.symbol {
+            if index_stack.len() == 0 {
+                continue;
+            }
+
+            let start_index = index_stack.pop().unwrap();
+
+            let start_character = nodes[start_index].get_characters().0;
+            let end_character = nodes[index].get_characters().1;
+
+            let start_line = nodes[start_index].get_lines().0;
+            let end_line = nodes[index].get_lines().1;
+
+            let mut content: Vec<Node> = nodes.drain(start_index + 1..=index).collect();
+            content.pop().unwrap();
+
+            nodes.splice(start_index..=start_index, std::iter::once(Node::Group(GroupNode {
+                content: content,
+                characters: (start_character, end_character),
+                lines: (start_line, end_line),
+            })));
         }
     }
 
