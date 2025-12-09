@@ -383,7 +383,6 @@ impl fmt::Display for BlockNode {
 }
 
 pub struct AssignmentNode {
-    pub node_type: TypeNode,
     pub name: NameNode,
     pub value: Box<Node>,
     pub lines: (usize, usize),
@@ -394,8 +393,30 @@ impl fmt::Display for AssignmentNode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "Assignment {} {} = {}  {}, {} -> {}, {}",
-            self.node_type, self.name, self.value, self.lines.0, self.characters.0, self.lines.1, self.characters.1
+            "Assignment {} = {}  {}, {} -> {}, {}",
+            self.name, self.value, self.lines.0, self.characters.0, self.lines.1, self.characters.1
+        )
+    }
+}
+
+pub struct VariableDefinitionNode {
+    pub node_type: TypeNode,
+    pub assignment: AssignmentNode,
+    pub lines: (usize, usize),
+    pub characters: (usize, usize),
+}
+
+impl fmt::Display for VariableDefinitionNode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Variable Definition {} {}  {}, {} -> {}, {}",
+            self.node_type,
+            self.assignment,
+            self.lines.0,
+            self.characters.0,
+            self.lines.1,
+            self.characters.1
         )
     }
 }
@@ -411,36 +432,39 @@ pub enum Node {
     Name(NameNode),
     Block(BlockNode),
     Assignment(AssignmentNode),
+    VariableDefinition(VariableDefinitionNode),
 }
 
 impl Node {
     pub fn get_characters(&self) -> (usize, usize) {
         match self {
-            Node::String => { (0, 0) },
-            Node::Keyword(keyword_node) => { keyword_node.characters },
-            Node::Type(type_node) => { type_node.characters },
-            Node::Operator(operator_node) => { operator_node.characters },
-            Node::Symbol(symbol_node) => { symbol_node.characters },
-            Node::Number(number_node) => { number_node.characters },
-            Node::Boolean(boolean_node) => { boolean_node.characters },
-            Node::Name(name_node) => { name_node.characters },
-            Node::Block(block_node) => { block_node.characters },
-            Node::Assignment(assignment_node) => { assignment_node.characters },
+            Node::String => (0, 0),
+            Node::Keyword(keyword_node) => keyword_node.characters,
+            Node::Type(type_node) => type_node.characters,
+            Node::Operator(operator_node) => operator_node.characters,
+            Node::Symbol(symbol_node) => symbol_node.characters,
+            Node::Number(number_node) => number_node.characters,
+            Node::Boolean(boolean_node) => boolean_node.characters,
+            Node::Name(name_node) => name_node.characters,
+            Node::Block(block_node) => block_node.characters,
+            Node::Assignment(assignment_node) => assignment_node.characters,
+            Node::VariableDefinition(node) => node.characters,
         }
     }
 
     pub fn get_lines(&self) -> (usize, usize) {
         match self {
-            Node::String => { (0, 0) },
-            Node::Keyword(keyword_node) => { keyword_node.lines },
-            Node::Type(type_node) => { type_node.lines },
-            Node::Operator(operator_node) => { operator_node.lines },
-            Node::Symbol(symbol_node) => { symbol_node.lines },
-            Node::Number(number_node) => { number_node.lines },
-            Node::Boolean(boolean_node) => { boolean_node.lines },
-            Node::Name(name_node) => { name_node.lines },
-            Node::Block(block_node) => { block_node.lines },
-            Node::Assignment(assignment_node) => { assignment_node.lines },
+            Node::String => (0, 0),
+            Node::Keyword(keyword_node) => keyword_node.lines,
+            Node::Type(type_node) => type_node.lines,
+            Node::Operator(operator_node) => operator_node.lines,
+            Node::Symbol(symbol_node) => symbol_node.lines,
+            Node::Number(number_node) => number_node.lines,
+            Node::Boolean(boolean_node) => boolean_node.lines,
+            Node::Name(name_node) => name_node.lines,
+            Node::Block(block_node) => block_node.lines,
+            Node::Assignment(assignment_node) => assignment_node.lines,
+            Node::VariableDefinition(node) => node.lines,
         }
     }
 }
@@ -457,6 +481,7 @@ impl fmt::Display for Node {
             Node::Symbol(symbol_node) => write!(f, "{}", symbol_node),
             Node::Block(block_node) => write!(f, "{}", block_node),
             Node::Assignment(assignment_node) => write!(f, "{}", assignment_node),
+            Node::VariableDefinition(node) => write!(f, "{}", node),
             _ => write!(f, "Unknown"),
         }
     }
@@ -469,15 +494,19 @@ const KEYWORD_STRINGS: &[&str] = &["if", "forever", "return"];
 
 pub fn build_blocks(nodes: &mut Vec<Node>) {
     let mut index_stack: Vec<usize> = Vec::new();
-   
+
     for index in 0..nodes.len() {
         let token = &nodes[index];
-        
-        if let Node::Symbol(symbol_node) = token && let Symbol::OpenCurlyBracket = symbol_node.symbol {
+
+        if let Node::Symbol(symbol_node) = token
+            && let Symbol::OpenCurlyBracket = symbol_node.symbol
+        {
             index_stack.push(index);
         }
 
-        if let Node::Symbol(symbol_node) = token && let Symbol::ClosedCurlyBracket = symbol_node.symbol {
+        if let Node::Symbol(symbol_node) = token
+            && let Symbol::ClosedCurlyBracket = symbol_node.symbol
+        {
             if index_stack.len() == 0 {
                 continue;
             }
@@ -492,16 +521,19 @@ pub fn build_blocks(nodes: &mut Vec<Node>) {
 
             let content: Vec<Node> = nodes.drain(start_index + 1..index).collect();
 
-            nodes.splice(start_index..start_index+2, std::iter::once(Node::Block(BlockNode {
-                content: content,
-                characters: (start_character, end_character),
-                lines: (start_line, end_line),
-            })));
+            nodes.splice(
+                start_index..start_index + 2,
+                std::iter::once(Node::Block(BlockNode {
+                    content: content,
+                    characters: (start_character, end_character),
+                    lines: (start_line, end_line),
+                })),
+            );
         }
     }
 }
 
-pub fn build_assignements(nodes: &mut Vec<Node>, ) {
+pub fn build_assignements(nodes: &mut Vec<Node>) {
     for index in 0..nodes.len() {
         if index >= nodes.len() {
             break;
@@ -509,21 +541,85 @@ pub fn build_assignements(nodes: &mut Vec<Node>, ) {
 
         if let Node::Block(block_node) = &mut nodes[index] {
             build_assignements(&mut block_node.content);
-        } else if nodes.len() >= 4 && index <= nodes.len() - 4 {
-            let type_node = &nodes[index];
-            let name_node = &nodes[index + 1];
-            let assignment_node = &nodes[index + 2];
+        } else if nodes.len() >= 3 && index <= nodes.len() - 3 {
+            let name_node = &nodes[index];
+            let operator_node = &nodes[index + 1];
 
-            if let Node::Type(_) = type_node && let Node::Name(_) = name_node && let Node::Operator(operator_node) = assignment_node && let Operator::Assign = operator_node.operator {
-                let type_node = nodes.remove(index);
+            if let Node::Name(_) = name_node
+                && let Node::Operator(operator_node) = operator_node
+                && let Operator::Assign = operator_node.operator
+            {
                 let name_node = nodes.remove(index);
-                let _assignment_node = nodes.remove(index);
+                let _operator_node = nodes.remove(index);
                 let value_node = nodes.remove(index);
 
-                let inner_type = if let Node::Type(node) = type_node { node } else { unreachable!() };
-                let inner_name = if let Node::Name(node) = name_node { node } else { unreachable!() };
+                let lines = (name_node.get_lines().0, value_node.get_lines().1);
+                let characters = (name_node.get_characters().0, value_node.get_characters().1);
 
-                nodes.insert(index, Node::Assignment(AssignmentNode { node_type: inner_type, name: inner_name, value: Box::new(value_node), lines: (0, 0), characters: (0, 0) }));
+                let inner_name = if let Node::Name(node) = name_node {
+                    node
+                } else {
+                    unreachable!()
+                };
+
+                nodes.insert(
+                    index,
+                    Node::Assignment(AssignmentNode {
+                        name: inner_name,
+                        value: Box::new(value_node),
+                        lines,
+                        characters,
+                    }),
+                );
+            }
+        }
+    }
+}
+
+pub fn build_variable_definitions(nodes: &mut Vec<Node>) {
+    for index in 0..nodes.len() {
+        if index >= nodes.len() {
+            break;
+        }
+
+        if let Node::Block(block_node) = &mut nodes[index] {
+            build_variable_definitions(&mut block_node.content);
+        } else if nodes.len() >= 2 && index <= nodes.len() - 2 {
+            let type_node = &nodes[index];
+            let assignment_node = &nodes[index + 1];
+
+            if let Node::Type(_) = type_node
+                && let Node::Assignment(_) = assignment_node
+            {
+                let type_node = nodes.remove(index);
+                let assignment_node = nodes.remove(index);
+
+                let lines = (type_node.get_lines().0, assignment_node.get_lines().1);
+                let characters = (
+                    type_node.get_characters().0,
+                    assignment_node.get_characters().1,
+                );
+
+                let inner_type = if let Node::Type(node) = type_node {
+                    node
+                } else {
+                    unreachable!()
+                };
+                let inner_assignment = if let Node::Assignment(node) = assignment_node {
+                    node
+                } else {
+                    unreachable!()
+                };
+
+                nodes.insert(
+                    index,
+                    Node::VariableDefinition(VariableDefinitionNode {
+                        node_type: inner_type,
+                        assignment: inner_assignment,
+                        lines,
+                        characters,
+                    }),
+                );
             }
         }
     }
@@ -560,6 +656,7 @@ pub fn build_syntax_tree(tokens: &Vec<tokenizer::Token>) -> Vec<Node> {
 
     build_blocks(&mut nodes);
     build_assignements(&mut nodes);
+    build_variable_definitions(&mut nodes);
 
     return nodes;
 }
