@@ -121,5 +121,14 @@ pub fn tokenize(code: &str) -> Vec<Token> {
         }
     }
 
+    if start_character_index != code.len() {
+        tokens.push(Token {
+            content: String::from(&code[start_character_index..code.len()]),
+            lines: (start_line, current_line),
+            characters: (start_character, current_character - 1),
+            token_type: TokenType::Unkown,
+        });
+    }
+
     return tokens;
 }

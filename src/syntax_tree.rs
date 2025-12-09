@@ -402,6 +402,8 @@ impl BlockNode {
             sub_display += &format!("{}\n", node.display(depth + 1));
         }
 
+        sub_display.pop().unwrap();
+
         return format!("{}Block\n{}", " | ".repeat(depth), sub_display);
     }
 }
@@ -574,6 +576,10 @@ pub fn build_blocks(nodes: &mut Vec<Node>) {
     let mut index_stack: Vec<usize> = Vec::new();
 
     for index in 0..nodes.len() {
+        if index >= nodes.len() {
+            break;
+        }
+
         let token = &nodes[index];
 
         if let Node::Symbol(symbol_node) = token
