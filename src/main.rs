@@ -15,6 +15,6 @@ fn main() {
     let tree = syntax_tree::build_syntax_tree(&tokens);
 
     for node in tree {
-        println!("{}", node);
+        println!("{}", node.display(0));
     }
 }

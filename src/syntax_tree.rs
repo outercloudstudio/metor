@@ -83,6 +83,10 @@ impl OperatorNode {
             characters: token.characters,
         };
     }
+
+    pub fn display(&self, depth: usize) -> String {
+        return format!("{}Operator {}", " | ".repeat(depth), self.operator);
+    }
 }
 
 impl fmt::Display for OperatorNode {
@@ -149,6 +153,10 @@ impl SymbolNode {
             characters: token.characters,
         };
     }
+
+    pub fn display(&self, depth: usize) -> String {
+        return format!("{}Symbol {}", " | ".repeat(depth), self.symbol);
+    }
 }
 
 impl fmt::Display for SymbolNode {
@@ -211,6 +219,10 @@ impl TypeNode {
             characters: token.characters,
         };
     }
+
+    pub fn display(&self, depth: usize) -> String {
+        return format!("{}Type {}", " | ".repeat(depth), self.node_type);
+    }
 }
 
 impl fmt::Display for TypeNode {
@@ -236,6 +248,10 @@ impl BooleanNode {
             lines: token.lines,
             characters: token.characters,
         };
+    }
+
+    pub fn display(&self, depth: usize) -> String {
+        return format!("{}Boolean {}", " | ".repeat(depth), self.value);
     }
 }
 
@@ -272,6 +288,10 @@ impl NumberNode {
             characters: token.characters,
         };
     }
+
+    pub fn display(&self, depth: usize) -> String {
+        return format!("{}Number {}", " | ".repeat(depth), self.value);
+    }
 }
 
 impl fmt::Display for NumberNode {
@@ -297,6 +317,10 @@ impl NameNode {
             lines: token.lines,
             characters: token.characters,
         };
+    }
+
+    pub fn display(&self, depth: usize) -> String {
+        return format!("{}Name {}", " | ".repeat(depth), self.value);
     }
 }
 
@@ -348,6 +372,10 @@ impl KeywordNode {
             characters: token.characters,
         };
     }
+
+    pub fn display(&self, depth: usize) -> String {
+        return format!("{}Keyword {}", " | ".repeat(depth), self.keyword);
+    }
 }
 
 impl fmt::Display for KeywordNode {
@@ -364,6 +392,18 @@ pub struct BlockNode {
     pub content: Vec<Node>,
     pub lines: (usize, usize),
     pub characters: (usize, usize),
+}
+
+impl BlockNode {
+    pub fn display(&self, depth: usize) -> String {
+        let mut sub_display = String::from("");
+
+        for node in &self.content {
+            sub_display += &format!("{}\n", node.display(depth + 1));
+        }
+
+        return format!("{}Block\n{}", " | ".repeat(depth), sub_display);
+    }
 }
 
 impl fmt::Display for BlockNode {
@@ -389,6 +429,17 @@ pub struct AssignmentNode {
     pub characters: (usize, usize),
 }
 
+impl AssignmentNode {
+    pub fn display(&self, depth: usize) -> String {
+        return format!(
+            "{}Assignment\n{}\n{}",
+            " | ".repeat(depth),
+            self.name.display(depth + 1),
+            self.value.display(depth + 1)
+        );
+    }
+}
+
 impl fmt::Display for AssignmentNode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -404,6 +455,17 @@ pub struct VariableDefinitionNode {
     pub assignment: AssignmentNode,
     pub lines: (usize, usize),
     pub characters: (usize, usize),
+}
+
+impl VariableDefinitionNode {
+    pub fn display(&self, depth: usize) -> String {
+        return format!(
+            "{}Variable Definition\n{}\n{}",
+            " | ".repeat(depth),
+            self.node_type.display(depth + 1),
+            self.assignment.display(depth + 1)
+        );
+    }
 }
 
 impl fmt::Display for VariableDefinitionNode {
@@ -439,15 +501,15 @@ impl Node {
     pub fn get_characters(&self) -> (usize, usize) {
         match self {
             Node::String => (0, 0),
-            Node::Keyword(keyword_node) => keyword_node.characters,
-            Node::Type(type_node) => type_node.characters,
-            Node::Operator(operator_node) => operator_node.characters,
-            Node::Symbol(symbol_node) => symbol_node.characters,
-            Node::Number(number_node) => number_node.characters,
-            Node::Boolean(boolean_node) => boolean_node.characters,
-            Node::Name(name_node) => name_node.characters,
-            Node::Block(block_node) => block_node.characters,
-            Node::Assignment(assignment_node) => assignment_node.characters,
+            Node::Keyword(node) => node.characters,
+            Node::Type(node) => node.characters,
+            Node::Operator(node) => node.characters,
+            Node::Symbol(node) => node.characters,
+            Node::Number(node) => node.characters,
+            Node::Boolean(node) => node.characters,
+            Node::Name(node) => node.characters,
+            Node::Block(node) => node.characters,
+            Node::Assignment(node) => node.characters,
             Node::VariableDefinition(node) => node.characters,
         }
     }
@@ -455,16 +517,32 @@ impl Node {
     pub fn get_lines(&self) -> (usize, usize) {
         match self {
             Node::String => (0, 0),
-            Node::Keyword(keyword_node) => keyword_node.lines,
-            Node::Type(type_node) => type_node.lines,
-            Node::Operator(operator_node) => operator_node.lines,
-            Node::Symbol(symbol_node) => symbol_node.lines,
-            Node::Number(number_node) => number_node.lines,
-            Node::Boolean(boolean_node) => boolean_node.lines,
-            Node::Name(name_node) => name_node.lines,
-            Node::Block(block_node) => block_node.lines,
-            Node::Assignment(assignment_node) => assignment_node.lines,
+            Node::Keyword(node) => node.lines,
+            Node::Type(node) => node.lines,
+            Node::Operator(node) => node.lines,
+            Node::Symbol(node) => node.lines,
+            Node::Number(node) => node.lines,
+            Node::Boolean(node) => node.lines,
+            Node::Name(node) => node.lines,
+            Node::Block(node) => node.lines,
+            Node::Assignment(node) => node.lines,
             Node::VariableDefinition(node) => node.lines,
+        }
+    }
+
+    pub fn display(&self, depth: usize) -> String {
+        match self {
+            Node::String => String::from("String"),
+            Node::Keyword(node) => node.display(depth),
+            Node::Type(node) => node.display(depth),
+            Node::Operator(node) => node.display(depth),
+            Node::Symbol(node) => node.display(depth),
+            Node::Number(node) => node.display(depth),
+            Node::Boolean(node) => node.display(depth),
+            Node::Name(node) => node.display(depth),
+            Node::Block(node) => node.display(depth),
+            Node::Assignment(node) => node.display(depth),
+            Node::VariableDefinition(node) => node.display(depth),
         }
     }
 }
