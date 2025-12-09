@@ -485,6 +485,42 @@ impl fmt::Display for VariableDefinitionNode {
     }
 }
 
+pub struct FunctionDefinitionNode {
+    pub node_type: TypeNode,
+    pub name: NameNode,
+    pub block: BlockNode,
+    pub lines: (usize, usize),
+    pub characters: (usize, usize),
+}
+
+impl FunctionDefinitionNode {
+    pub fn display(&self, depth: usize) -> String {
+        return format!(
+            "{}Function Definition\n{}\n{}\n{}",
+            " | ".repeat(depth),
+            self.node_type.display(depth + 1),
+            self.name.display(depth + 1),
+            self.block.display(depth + 1),
+        );
+    }
+}
+
+impl fmt::Display for FunctionDefinitionNode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Function Definition {} {} {}  {}, {} -> {}, {}",
+            self.node_type,
+            self.name,
+            self.block,
+            self.lines.0,
+            self.characters.0,
+            self.lines.1,
+            self.characters.1
+        )
+    }
+}
+
 pub enum Node {
     String,
     Keyword(KeywordNode),
@@ -497,6 +533,7 @@ pub enum Node {
     Block(BlockNode),
     Assignment(AssignmentNode),
     VariableDefinition(VariableDefinitionNode),
+    FunctionDefinition(FunctionDefinitionNode),
 }
 
 impl Node {
@@ -513,6 +550,7 @@ impl Node {
             Node::Block(node) => node.characters,
             Node::Assignment(node) => node.characters,
             Node::VariableDefinition(node) => node.characters,
+            Node::FunctionDefinition(node) => node.characters,
         }
     }
 
@@ -529,6 +567,7 @@ impl Node {
             Node::Block(node) => node.lines,
             Node::Assignment(node) => node.lines,
             Node::VariableDefinition(node) => node.lines,
+            Node::FunctionDefinition(node) => node.lines,
         }
     }
 
@@ -545,6 +584,7 @@ impl Node {
             Node::Block(node) => node.display(depth),
             Node::Assignment(node) => node.display(depth),
             Node::VariableDefinition(node) => node.display(depth),
+            Node::FunctionDefinition(node) => node.display(depth),
         }
     }
 }
@@ -709,6 +749,61 @@ pub fn build_variable_definitions(nodes: &mut Vec<Node>) {
     }
 }
 
+pub fn build_function_definitions(nodes: &mut Vec<Node>) {
+    for index in 0..nodes.len() {
+        if index >= nodes.len() {
+            break;
+        }
+
+        if let Node::Block(block_node) = &mut nodes[index] {
+            build_function_definitions(&mut block_node.content);
+        } else if nodes.len() >= 3 && index <= nodes.len() - 3 {
+            let type_node = &nodes[index];
+            let name_node = &nodes[index + 1];
+            let block_node = &nodes[index + 2];
+
+            if let Node::Type(_) = type_node
+                && let Node::Name(_) = name_node
+                && let Node::Block(_) = block_node
+            {
+                let type_node = nodes.remove(index);
+                let name_node = nodes.remove(index);
+                let block_node = nodes.remove(index);
+
+                let lines = (type_node.get_lines().0, block_node.get_lines().1);
+                let characters = (type_node.get_characters().0, block_node.get_characters().1);
+
+                let inner_type = if let Node::Type(node) = type_node {
+                    node
+                } else {
+                    unreachable!()
+                };
+                let inner_name = if let Node::Name(node) = name_node {
+                    node
+                } else {
+                    unreachable!()
+                };
+                let inner_block = if let Node::Block(node) = block_node {
+                    node
+                } else {
+                    unreachable!()
+                };
+
+                nodes.insert(
+                    index,
+                    Node::FunctionDefinition(FunctionDefinitionNode {
+                        node_type: inner_type,
+                        name: inner_name,
+                        block: inner_block,
+                        lines,
+                        characters,
+                    }),
+                );
+            }
+        }
+    }
+}
+
 pub fn build_syntax_tree(tokens: &Vec<tokenizer::Token>) -> Vec<Node> {
     let mut nodes: Vec<Node> = Vec::new();
 
@@ -741,6 +836,7 @@ pub fn build_syntax_tree(tokens: &Vec<tokenizer::Token>) -> Vec<Node> {
     build_blocks(&mut nodes);
     build_assignements(&mut nodes);
     build_variable_definitions(&mut nodes);
+    build_function_definitions(&mut nodes);
 
     return nodes;
 }
