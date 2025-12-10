@@ -612,6 +612,83 @@ const TYPE_STRINGS: &[&str] = &["i32", "u32", "f32", "string", "void", "bool"];
 const OPERATOR_STRINGS: &[&str] = &["&", "|", "<", "=", ">", "+", "-", "/", "*", "%", "."];
 const KEYWORD_STRINGS: &[&str] = &["if", "forever", "return"];
 
+pub fn build_multisymbol_operators(nodes: &mut Vec<Node>) {
+    for index in 0..nodes.len() {
+        if index >= nodes.len() {
+            break;
+        }
+
+        if nodes.len() >= 2 && index <= nodes.len() - 2 {
+            let first_symbol = &nodes[index];
+            let second_symbol = &nodes[index + 1];
+
+            if let Node::Operator(first_symbol_node) = first_symbol
+                && let Node::Operator(second_symbol_node) = second_symbol
+            {
+                let lines = (first_symbol.get_lines().0, second_symbol.get_lines().1);
+                let characters = (first_symbol.get_characters().0, second_symbol.get_characters().1);
+
+                if let Operator::BitwiseAnd = first_symbol_node.operator && let Operator::BitwiseAnd = second_symbol_node.operator {
+                    nodes.remove(index);
+                    nodes.remove(index);
+                    nodes.insert(
+                        index,
+                        Node::Operator(OperatorNode {
+                            operator: Operator::And,
+                            lines,
+                            characters,
+                        }),
+                    );
+                } else if let Operator::BitwiseOr = first_symbol_node.operator && let Operator::BitwiseOr = second_symbol_node.operator {
+                    nodes.remove(index);
+                    nodes.remove(index);
+                    nodes.insert(
+                        index,
+                        Node::Operator(OperatorNode {
+                            operator: Operator::Or,
+                            lines,
+                            characters,
+                        }),
+                    );
+                } else if let Operator::LessThan = first_symbol_node.operator && let Operator::Assign = second_symbol_node.operator {
+                    nodes.remove(index);
+                    nodes.remove(index);
+                    nodes.insert(
+                        index,
+                        Node::Operator(OperatorNode {
+                            operator: Operator::LessThanOrEqual,
+                            lines,
+                            characters,
+                        }),
+                    );
+                } else if let Operator::GreaterThan = first_symbol_node.operator && let Operator::Assign = second_symbol_node.operator {
+                    nodes.remove(index);
+                    nodes.remove(index);
+                    nodes.insert(
+                        index,
+                        Node::Operator(OperatorNode {
+                            operator: Operator::GreaterThanOrEqual,
+                            lines,
+                            characters,
+                        }),
+                    );
+                } else if let Operator::Assign = first_symbol_node.operator && let Operator::Assign = second_symbol_node.operator {
+                    nodes.remove(index);
+                    nodes.remove(index);
+                    nodes.insert(
+                        index,
+                        Node::Operator(OperatorNode {
+                            operator: Operator::Equal,
+                            lines,
+                            characters,
+                        }),
+                    );
+                }
+            }
+        }
+    }
+}
+
 pub fn build_blocks(nodes: &mut Vec<Node>) {
     let mut index_stack: Vec<usize> = Vec::new();
 
@@ -833,6 +910,7 @@ pub fn build_syntax_tree(tokens: &Vec<tokenizer::Token>) -> Vec<Node> {
         }
     }
 
+    build_multisymbol_operators(&mut nodes);
     build_blocks(&mut nodes);
     build_assignements(&mut nodes);
     build_variable_definitions(&mut nodes);
