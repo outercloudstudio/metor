@@ -625,6 +625,14 @@ pub fn build_multisymbol_operators(nodes: &mut Vec<Node>) {
             if let Node::Operator(first_symbol_node) = first_symbol
                 && let Node::Operator(second_symbol_node) = second_symbol
             {
+                if first_symbol_node.lines.1 != second_symbol_node.lines.0 {
+                    continue;
+                }
+
+                if first_symbol_node.characters.1 + 1 != second_symbol_node.characters.0 {
+                    continue;
+                }
+
                 let lines = (first_symbol.get_lines().0, second_symbol.get_lines().1);
                 let characters = (first_symbol.get_characters().0, second_symbol.get_characters().1);
 
