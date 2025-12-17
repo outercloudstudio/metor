@@ -50,6 +50,30 @@ impl Operator {
             _ => false,
         }
     }
+
+    pub fn priority(&self) -> usize {
+        match self {
+            Operator::BitwiseAnd => 0,
+            Operator::BitwiseOr => 0,
+            Operator::And => 6,
+            Operator::Or => 6,
+            Operator::LessThan => 5,
+            Operator::LessThanOrEqual => 5,
+            Operator::GreaterThan => 5,
+            Operator::GreaterThanOrEqual => 5,
+            Operator::Equal => 5,
+            Operator::Add => 2,
+            Operator::Subtract => 2,
+            Operator::Multiply => 1,
+            Operator::Divide => 1,
+            Operator::Modulo => 3,
+            _ => 9999999,
+        }
+    }
+
+    pub fn priority_limit() -> usize {
+        6
+    }
 }
 
 impl fmt::Display for Operator {
@@ -701,9 +725,14 @@ pub fn build_multisymbol_operators(nodes: &mut Vec<Node>) {
                 }
 
                 let lines = (first_symbol.get_lines().0, second_symbol.get_lines().1);
-                let characters = (first_symbol.get_characters().0, second_symbol.get_characters().1);
+                let characters = (
+                    first_symbol.get_characters().0,
+                    second_symbol.get_characters().1,
+                );
 
-                if let Operator::BitwiseAnd = first_symbol_node.operator && let Operator::BitwiseAnd = second_symbol_node.operator {
+                if let Operator::BitwiseAnd = first_symbol_node.operator
+                    && let Operator::BitwiseAnd = second_symbol_node.operator
+                {
                     nodes.remove(index);
                     nodes.remove(index);
                     nodes.insert(
@@ -714,7 +743,9 @@ pub fn build_multisymbol_operators(nodes: &mut Vec<Node>) {
                             characters,
                         }),
                     );
-                } else if let Operator::BitwiseOr = first_symbol_node.operator && let Operator::BitwiseOr = second_symbol_node.operator {
+                } else if let Operator::BitwiseOr = first_symbol_node.operator
+                    && let Operator::BitwiseOr = second_symbol_node.operator
+                {
                     nodes.remove(index);
                     nodes.remove(index);
                     nodes.insert(
@@ -725,7 +756,9 @@ pub fn build_multisymbol_operators(nodes: &mut Vec<Node>) {
                             characters,
                         }),
                     );
-                } else if let Operator::LessThan = first_symbol_node.operator && let Operator::Assign = second_symbol_node.operator {
+                } else if let Operator::LessThan = first_symbol_node.operator
+                    && let Operator::Assign = second_symbol_node.operator
+                {
                     nodes.remove(index);
                     nodes.remove(index);
                     nodes.insert(
@@ -736,7 +769,9 @@ pub fn build_multisymbol_operators(nodes: &mut Vec<Node>) {
                             characters,
                         }),
                     );
-                } else if let Operator::GreaterThan = first_symbol_node.operator && let Operator::Assign = second_symbol_node.operator {
+                } else if let Operator::GreaterThan = first_symbol_node.operator
+                    && let Operator::Assign = second_symbol_node.operator
+                {
                     nodes.remove(index);
                     nodes.remove(index);
                     nodes.insert(
@@ -747,7 +782,9 @@ pub fn build_multisymbol_operators(nodes: &mut Vec<Node>) {
                             characters,
                         }),
                     );
-                } else if let Operator::Assign = first_symbol_node.operator && let Operator::Assign = second_symbol_node.operator {
+                } else if let Operator::Assign = first_symbol_node.operator
+                    && let Operator::Assign = second_symbol_node.operator
+                {
                     nodes.remove(index);
                     nodes.remove(index);
                     nodes.insert(
@@ -957,48 +994,51 @@ pub fn build_function_definitions(nodes: &mut Vec<Node>) {
 }
 
 pub fn build_operations(nodes: &mut Vec<Node>) {
-    let mut index = 0;
+    for priority in 0..Operator::priority_limit() {
+        let mut index = 0;
 
-    while index < nodes.len() {
-        if let Node::Block(block_node) = &mut nodes[index] {
-            build_operations(&mut block_node.content);
-        } else if nodes.len() >= 3 && index <= nodes.len() - 3 {
-            let operator_node = &nodes[index + 1];
+        while index < nodes.len() {
+            if let Node::Block(block_node) = &mut nodes[index] {
+                build_operations(&mut block_node.content);
+            } else if nodes.len() >= 3 && index <= nodes.len() - 3 {
+                let operator_node = &nodes[index + 1];
 
-            if let Node::Operator(operator_node) = operator_node
-                && operator_node.operator.two_sided()
-            {
-                let value_a_node = nodes.remove(index);
-                let operator_node = nodes.remove(index);
-                let value_b_node = nodes.remove(index);
+                if let Node::Operator(operator_node) = operator_node
+                    && operator_node.operator.two_sided()
+                    && operator_node.operator.priority() == priority
+                {
+                    let value_a_node = nodes.remove(index);
+                    let operator_node = nodes.remove(index);
+                    let value_b_node = nodes.remove(index);
 
-                let lines = (value_a_node.get_lines().0, value_b_node.get_lines().1);
-                let characters = (
-                    value_a_node.get_characters().0,
-                    value_b_node.get_characters().1,
-                );
+                    let lines = (value_a_node.get_lines().0, value_b_node.get_lines().1);
+                    let characters = (
+                        value_a_node.get_characters().0,
+                        value_b_node.get_characters().1,
+                    );
 
-                let inner_operator = if let Node::Operator(node) = operator_node {
-                    node
-                } else {
-                    unreachable!()
-                };
+                    let inner_operator = if let Node::Operator(node) = operator_node {
+                        node
+                    } else {
+                        unreachable!()
+                    };
 
-                nodes.insert(
-                    index,
-                    Node::Operation(OperationNode {
-                        operator: inner_operator,
-                        values: vec![value_a_node, value_b_node],
-                        lines,
-                        characters,
-                    }),
-                );
+                    nodes.insert(
+                        index,
+                        Node::Operation(OperationNode {
+                            operator: inner_operator,
+                            values: vec![value_a_node, value_b_node],
+                            lines,
+                            characters,
+                        }),
+                    );
 
-                index -= 1;
+                    index -= 1;
+                }
             }
-        }
 
-        index += 1;
+            index += 1;
+        }
     }
 }
 
