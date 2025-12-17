@@ -65,7 +65,7 @@ impl fmt::Display for Token {
 const WHITE_SPACE_CHARACTERS: &[char] = &[' ', '\t', '\r'];
 const SEPERATOR_CHARACTERS: &[char] = &['\n'];
 const SYMBOL_CHARACTERS: &[char] = &[
-    '+', '-', '/', '*', '=', '(', ')', ',', '"', '\'', '<', '>', '{', '}', '&', '|', '.', '%',
+    '+', '-', '/', '*', '=', '(', ')', ',', '"', '\'', '<', '>', '{', '}', '&', '|', '.', '%', '!',
 ];
 
 pub fn tokenize(code: &str) -> Vec<Token> {

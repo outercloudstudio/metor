@@ -20,6 +20,36 @@ pub enum Operator {
     Divide,
     Modulo,
     Access,
+    Not,
+}
+
+impl Operator {
+    pub fn two_sided(&self) -> bool {
+        match self {
+            Operator::BitwiseAnd => true,
+            Operator::BitwiseOr => true,
+            Operator::And => true,
+            Operator::Or => true,
+            Operator::LessThan => true,
+            Operator::LessThanOrEqual => true,
+            Operator::GreaterThan => true,
+            Operator::GreaterThanOrEqual => true,
+            Operator::Equal => true,
+            Operator::Add => true,
+            Operator::Subtract => true,
+            Operator::Multiply => true,
+            Operator::Divide => true,
+            Operator::Modulo => true,
+            _ => false,
+        }
+    }
+
+    pub fn one_sided(&self) -> bool {
+        match self {
+            Operator::Not => true,
+            _ => false,
+        }
+    }
 }
 
 impl fmt::Display for Operator {
@@ -41,6 +71,7 @@ impl fmt::Display for Operator {
             Operator::Divide => write!(f, "/"),
             Operator::Modulo => write!(f, "%"),
             Operator::Access => write!(f, "."),
+            Operator::Not => write!(f, "!"),
         }
     }
 }
@@ -521,6 +552,38 @@ impl fmt::Display for FunctionDefinitionNode {
     }
 }
 
+pub struct OperationNode {
+    pub operator: OperatorNode,
+    pub values: Vec<Node>,
+    pub lines: (usize, usize),
+    pub characters: (usize, usize),
+}
+
+impl OperationNode {
+    pub fn display(&self, depth: usize) -> String {
+        let mut sub_display = String::from("");
+
+        for node in &self.values {
+            sub_display += &format!("{}\n", node.display(depth + 1));
+        }
+
+        sub_display.pop().unwrap();
+
+        return format!(
+            "{}Operation\n{}\n{}",
+            " | ".repeat(depth),
+            self.operator.display(depth + 1),
+            sub_display
+        );
+    }
+}
+
+impl fmt::Display for OperationNode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Operation")
+    }
+}
+
 pub enum Node {
     String,
     Keyword(KeywordNode),
@@ -534,6 +597,7 @@ pub enum Node {
     Assignment(AssignmentNode),
     VariableDefinition(VariableDefinitionNode),
     FunctionDefinition(FunctionDefinitionNode),
+    Operation(OperationNode),
 }
 
 impl Node {
@@ -551,6 +615,7 @@ impl Node {
             Node::Assignment(node) => node.characters,
             Node::VariableDefinition(node) => node.characters,
             Node::FunctionDefinition(node) => node.characters,
+            Node::Operation(node) => node.characters,
         }
     }
 
@@ -568,6 +633,7 @@ impl Node {
             Node::Assignment(node) => node.lines,
             Node::VariableDefinition(node) => node.lines,
             Node::FunctionDefinition(node) => node.lines,
+            Node::Operation(node) => node.lines,
         }
     }
 
@@ -585,6 +651,7 @@ impl Node {
             Node::Assignment(node) => node.display(depth),
             Node::VariableDefinition(node) => node.display(depth),
             Node::FunctionDefinition(node) => node.display(depth),
+            Node::Operation(node) => node.display(depth),
         }
     }
 }
@@ -609,7 +676,7 @@ impl fmt::Display for Node {
 
 const BOOLEAN_STRINGS: &[&str] = &["true", "false"];
 const TYPE_STRINGS: &[&str] = &["i32", "u32", "f32", "string", "void", "bool"];
-const OPERATOR_STRINGS: &[&str] = &["&", "|", "<", "=", ">", "+", "-", "/", "*", "%", "."];
+const OPERATOR_STRINGS: &[&str] = &["&", "|", "<", "=", ">", "+", "-", "/", "*", "%", ".", "!"];
 const KEYWORD_STRINGS: &[&str] = &["if", "forever", "return"];
 
 pub fn build_multisymbol_operators(nodes: &mut Vec<Node>) {
@@ -889,6 +956,52 @@ pub fn build_function_definitions(nodes: &mut Vec<Node>) {
     }
 }
 
+pub fn build_operations(nodes: &mut Vec<Node>) {
+    let mut index = 0;
+
+    while index < nodes.len() {
+        if let Node::Block(block_node) = &mut nodes[index] {
+            build_operations(&mut block_node.content);
+        } else if nodes.len() >= 3 && index <= nodes.len() - 3 {
+            let operator_node = &nodes[index + 1];
+
+            if let Node::Operator(operator_node) = operator_node
+                && operator_node.operator.two_sided()
+            {
+                let value_a_node = nodes.remove(index);
+                let operator_node = nodes.remove(index);
+                let value_b_node = nodes.remove(index);
+
+                let lines = (value_a_node.get_lines().0, value_b_node.get_lines().1);
+                let characters = (
+                    value_a_node.get_characters().0,
+                    value_b_node.get_characters().1,
+                );
+
+                let inner_operator = if let Node::Operator(node) = operator_node {
+                    node
+                } else {
+                    unreachable!()
+                };
+
+                nodes.insert(
+                    index,
+                    Node::Operation(OperationNode {
+                        operator: inner_operator,
+                        values: vec![value_a_node, value_b_node],
+                        lines,
+                        characters,
+                    }),
+                );
+
+                index -= 1;
+            }
+        }
+
+        index += 1;
+    }
+}
+
 pub fn build_syntax_tree(tokens: &Vec<tokenizer::Token>) -> Vec<Node> {
     let mut nodes: Vec<Node> = Vec::new();
 
@@ -920,6 +1033,7 @@ pub fn build_syntax_tree(tokens: &Vec<tokenizer::Token>) -> Vec<Node> {
 
     build_multisymbol_operators(&mut nodes);
     build_blocks(&mut nodes);
+    build_operations(&mut nodes);
     build_assignements(&mut nodes);
     build_variable_definitions(&mut nodes);
     build_function_definitions(&mut nodes);
